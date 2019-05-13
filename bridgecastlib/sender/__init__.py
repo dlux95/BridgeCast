@@ -1,9 +1,11 @@
 from threading import Thread
 
+from bridgecastlib import SocketHelper
+
 class BaseSenderServer(Thread):
     pass
 
-class BaseSender(object):
+class BaseSender(Thread, SocketHelper):
     def attachFB(self, fb):
         self._fb = fb
 

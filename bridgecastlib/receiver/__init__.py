@@ -1,9 +1,11 @@
 from threading import Thread
 
+from bridgecastlib import SocketHelper
+
 class BaseReceiverServer(Thread):
     pass
 
-class BaseReceiver(Thread):
+class BaseReceiver(Thread, SocketHelper):
     def __init__(self, bridge, socket):
         Thread.__init__(self, name="%s:%s" % (str(self.__class__.__name__), socket.getpeername()))
         self._bridge = bridge

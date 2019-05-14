@@ -22,10 +22,98 @@ class VNCReceiverServer(Thread):
             re.start()
 
 class VNCReceiver(BaseReceiver):
+    def send_hello(self):
+        self.send_byte(b"RFB 003.003\n")
+
+    def send_security(self):
+        self.send_uint16(0)
+        self.send_uint16(1)
+
+    def send_init(self):
+        self.send_uint16(1280) # X
+        self.send_uint16(720) # Y
+        self.send_uint8(32) # Bits per pixel
+        self.send_uint8(32) # depth
+        self.send_uint8(1) # big endian
+        self.send_uint8(1) # true color
+        self.send_uint16(255) # max red
+        self.send_uint16(255) # max green
+        self.send_uint16(255) # max blue
+        self.send_uint8(0) # shift red
+        self.send_uint8(0) # shift green
+        self.send_uint8(0) # shift blue
+        self.send_byte(b"\x00\x00\x00") # padding
+        
+        name = "BridgeCast VNCReceiver"
+        self.send_uint32(len(name))
+        self.send_byte(bytes(name, "ascii"))
+
+    def handle_set_pixelformat(self):
+        print("Handle Set Pixelformat")
+        self.receive_bytes(19)
+
+    def handle_set_encoding(self):
+        print("Handle Set Encoding")
+        self.receive_bytes(1)
+        encodingnum = self.receive_uint16()
+        for i in range(encodingnum):
+            self.receive_int32()
+
+    def handle_framebuffer_update_request(self):
+        print("Handle Framebuffer Update Request")
+        self.receive_bytes(9)
+
+    def handle_key_event(self):
+        print("Handle Key Event")
+        self.receive_bytes(7)
+
+    def handle_pointer_event(self):
+        print("Handle Pointer Event")
+        self.receive_bytes(5)
+
+    def handle_client_cut_text(self):
+        print("Handle Client Cut Text")
+        self.receive_bytes(3)
+        l = self.receive_uint32()
+        text = self.receive_bytes(l)
+
     def run(self):
+        self.send_hello()
+        print("Hello: ", self._socket.recv(12))
+
+        self.send_security()
+        print("Security: ", self.receive_uint8())
+        
+        self.send_init()
+
         while True:
-            data = self._socket.recv(4096);
-            print(data)
-            if data == b"":
-                self._socket.close()
-                return
+            opcode = self.receive_uint8();
+
+            if opcode == 0:
+                self.handle_set_pixelformat()
+            if opcode == 2:
+                self.handle_set_encoding()
+            if opcode == 3:
+                self.handle_framebuffer_update_request()
+            if opcode == 4:
+                self.handle_key_event()
+            if opcode == 5:
+                self.handle_pointer_event()
+            if opcode == 6:
+                self.handle_client_cut_text()
+
+            self.send_uint8(0)
+            self.send_uint8(0)
+            self.send_uint16(1)
+
+            self.send_uint16(20)
+            self.send_uint16(30)
+            self.send_uint16(50)
+            self.send_uint16(350)
+            self.send_int32(0)
+
+            for i in range(50*50):
+                self.send_uint8(128)
+                self.send_uint8(128)
+                self.send_uint8(128)
+                self.send_uint8(0)

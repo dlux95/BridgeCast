@@ -1,6 +1,7 @@
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
 
+from bridgecastlib.VirtualFB import VirtualFB
 from bridgecastlib.receiver import BaseReceiver
 
 class VNCReceiverServer(Thread):
@@ -22,6 +23,10 @@ class VNCReceiverServer(Thread):
             re.start()
 
 class VNCReceiver(BaseReceiver):
+    def __init__(self, bridge, sock):
+        BaseReceiver.__init__(self, bridge, sock)
+        self._fb = VirtualFB(1280, 720, 32)
+
     def send_hello(self):
         self.send_byte(b"RFB 003.003\n")
 
@@ -49,30 +54,30 @@ class VNCReceiver(BaseReceiver):
         self.send_byte(bytes(name, "ascii"))
 
     def handle_set_pixelformat(self):
-        print("Handle Set Pixelformat")
+        #print("Handle Set Pixelformat")
         self.receive_bytes(19)
 
     def handle_set_encoding(self):
-        print("Handle Set Encoding")
+        #print("Handle Set Encoding")
         self.receive_bytes(1)
         encodingnum = self.receive_uint16()
         for i in range(encodingnum):
             self.receive_int32()
 
     def handle_framebuffer_update_request(self):
-        print("Handle Framebuffer Update Request")
+        #print("Handle Framebuffer Update Request")
         self.receive_bytes(9)
 
     def handle_key_event(self):
-        print("Handle Key Event")
+        #print("Handle Key Event")
         self.receive_bytes(7)
 
     def handle_pointer_event(self):
-        print("Handle Pointer Event")
+        #print("Handle Pointer Event")
         self.receive_bytes(5)
 
     def handle_client_cut_text(self):
-        print("Handle Client Cut Text")
+        #print("Handle Client Cut Text")
         self.receive_bytes(3)
         l = self.receive_uint32()
         text = self.receive_bytes(l)
@@ -85,6 +90,12 @@ class VNCReceiver(BaseReceiver):
         print("Security: ", self.receive_uint8())
         
         self.send_init()
+
+        x = 0
+        y = 0
+
+        test = [255 for i in range(50*50*4)]
+        self._fb.fill_rect(200, 200, 50, 50, bytearray(test))
 
         while True:
             opcode = self.receive_uint8();
@@ -102,18 +113,17 @@ class VNCReceiver(BaseReceiver):
             if opcode == 6:
                 self.handle_client_cut_text()
 
-            self.send_uint8(0)
-            self.send_uint8(0)
-            self.send_uint16(1)
-
-            self.send_uint16(20)
-            self.send_uint16(30)
-            self.send_uint16(50)
-            self.send_uint16(350)
-            self.send_int32(0)
-
-            for i in range(50*50):
-                self.send_uint8(128)
-                self.send_uint8(128)
-                self.send_uint8(128)
+            if self._fb.dirty:
+                print("FrameBuffer is dirty. Sending it")
                 self.send_uint8(0)
+                self.send_uint8(0)
+                self.send_uint16(1)
+
+                self.send_uint16(x)
+                self.send_uint16(y)
+                self.send_uint16(1280)
+                self.send_uint16(720)
+                self.send_int32(0)
+
+                self.send_byte(self._fb.get_rect(x, y, 1280, 720))
+                self._fb.dirty = False

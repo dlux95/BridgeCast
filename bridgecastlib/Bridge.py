@@ -3,6 +3,7 @@ from time import sleep
 
 from bridgecastlib.receiver.VNCReceiver import VNCReceiverServer
 from bridgecastlib.sender.ReverseVNCSender import ReverseVNCSenderServer
+from bridgecastlib.Command import CommandServer
 
 class Bridge(Thread):
     def __init__(self):
@@ -27,6 +28,10 @@ class Bridge(Thread):
         print("Starting Servers...")
         for s in self._servers:
             s.start()
+
+        print("Start Command Server...")
+        cServer = CommandServer("", 80, self)
+        cServer.start()
 
         while True:
             rr = 0

@@ -1,5 +1,6 @@
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
+import math
 
 from bridgecastlib.VirtualFB import VirtualFB
 from bridgecastlib.receiver import BaseReceiver
@@ -95,7 +96,7 @@ class VNCReceiver(BaseReceiver):
         y = 0
 
         test = [255 for i in range(50*50*4)]
-        self._fb.fill_rect(200, 200, 50, 50, bytearray(test))
+        self._fb.fill_rect(100, 100, 50, 50, bytearray(test))
 
         while True:
             opcode = self.receive_uint8();

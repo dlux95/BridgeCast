@@ -9,5 +9,6 @@
         "**/*.pyc": {"when": "$(basename).py"}, 
         "**/__pycache__": true
     },
-    "git.postCommitCommand": "sync"
+    "git.postCommitCommand": "sync",
+    "python.pythonPath": "/usr/local/bin/python3"
 }

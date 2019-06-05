@@ -7,8 +7,14 @@ class SocketHelper(object):
         return b
 
 
-    def receive_uint8(self):
-        return int.from_bytes(self.receive_bytes(1), byteorder="big", signed=False)
+    def receive_uint8(self, blocking=True):
+        try:
+            if not blocking:
+                self._socket.setblocking(0)
+            return int.from_bytes(self.receive_bytes(1), byteorder="big", signed=False)
+        finally:
+            self._socket.setblocking(1)
+            
     def receive_int8(self):
         return int.from_bytes(self.receive_bytes(1), byteorder="big", signed=True)
 

@@ -1,9 +1,11 @@
+from time import sleep
 from threading import Thread
-from socket import socket, AF_INET, SOCK_STREAM
+from socket import socket, AF_INET, SOCK_STREAM,error
 import math
 
 from bridgecastlib.VirtualFB import VirtualFB
 from bridgecastlib.receiver import BaseReceiver
+from bridgecastlib.sender.VirtualDesktopSender import VirtualDesktopSender
 
 class VNCReceiverServer(Thread):
     def __init__(self, bridge, port):
@@ -27,6 +29,9 @@ class VNCReceiver(BaseReceiver):
     def __init__(self, bridge, sock):
         BaseReceiver.__init__(self, bridge, sock)
         self._fb = VirtualFB(1280, 720, 32)
+        self._bridge = bridge
+
+        
 
     def send_hello(self):
         self.send_byte(b"RFB 003.003\n")
@@ -84,6 +89,10 @@ class VNCReceiver(BaseReceiver):
         text = self.receive_bytes(l)
 
     def run(self):
+        virtualdesktop = VirtualDesktopSender(self)
+        virtualdesktop.start()
+        self._bridge.addSender(virtualdesktop)
+
         self.send_hello()
         print("Hello: ", self._socket.recv(12))
 
@@ -95,24 +104,25 @@ class VNCReceiver(BaseReceiver):
         x = 0
         y = 0
 
-        test = [255 for i in range(50*50*4)]
-        self._fb.fill_rect(100, 100, 50, 50, bytearray(test))
-
         while True:
-            opcode = self.receive_uint8();
+            try:
+                opcode = self.receive_uint8(False);
 
-            if opcode == 0:
-                self.handle_set_pixelformat()
-            if opcode == 2:
-                self.handle_set_encoding()
-            if opcode == 3:
-                self.handle_framebuffer_update_request()
-            if opcode == 4:
-                self.handle_key_event()
-            if opcode == 5:
-                self.handle_pointer_event()
-            if opcode == 6:
-                self.handle_client_cut_text()
+                if opcode == 0:
+                    self.handle_set_pixelformat()
+                if opcode == 2:
+                    self.handle_set_encoding()
+                if opcode == 3:
+                    self.handle_framebuffer_update_request()
+                if opcode == 4:
+                    self.handle_key_event()
+                if opcode == 5:
+                    self.handle_pointer_event()
+                if opcode == 6:
+                    self.handle_client_cut_text()
+            except error:
+                pass
+                #print("No data")
 
             if self._fb.dirty:
                 print("FrameBuffer is dirty. Sending it")
@@ -128,3 +138,4 @@ class VNCReceiver(BaseReceiver):
 
                 self.send_byte(self._fb.get_rect(x, y, 1280, 720))
                 self._fb.dirty = False
+                sleep(1/30.0)
